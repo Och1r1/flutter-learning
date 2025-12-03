@@ -1,0 +1,32 @@
+# Ignore Flutter SDK directory
+flutter/
+
+# Ignore macOS cruft
+.DS_Store
+
+# Ignore build artifacts inside any Flutter project
+**/build/
+**/.dart_tool/
+**/.flutter-plugins
+**/.flutter-plugins-dependencies
+**/.packages
+**/pubspec.lock
+
+# Ignore Android specific generated files
+**/android/.gradle/
+**/android/local.properties
+**/android/app/release/
+**/android/app/debug/
+
+# Ignore iOS specific generated files
+**/ios/Flutter/
+**/ios/Pods/
+**/ios/.symlinks/
+**/ios/Runner/GeneratedPluginRegistrant.*
+
+# Ignore Xcode user-specific stuff
+**/ios/Runner.xcodeproj/project.xcworkspace/
+**/ios/Runner.xcodeproj/xcuserdata/
+
+# Ignore VSCode settings if you don't want them
+.vscode/
