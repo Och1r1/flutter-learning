@@ -1,16 +1,9 @@
 # flutter_application_magic_8_ball
 
-A new Flutter project.
+A new magic 8 ball flutter project.
 
-## Getting Started
+# Visual Demo:
 
-This project is a starting point for a Flutter application.
+![Demo Screenshot](images/demo_screenshot.png)
 
-A few resources to get you started if this is your first Flutter project:
-
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
-
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+This is "The Complete Flutter Development Bootcamp with Dart" Boss Level Challenge 1. Watching all the tutorials before doing boss level challenge was a bit wrong. Because watching all the code first and then writing it on my own experience is like watching a 'how to swim' tutorial on YouTube and then directly jumping into the sea. But I really loved the process of coding. This was a different project from what I used to do before; everything is so creative, I can do whatever I want, and it is free-spirited. I loved it and am keen to do the rest of them tomorrow. I hope this will motivate you to start something that you always wanted to try. See you next time.
