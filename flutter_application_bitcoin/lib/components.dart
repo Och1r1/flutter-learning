@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 class CryptoCard extends StatelessWidget {
-  int price;
+  double price;
   String selectedCurrency;
   String cryptoCurrency;
 

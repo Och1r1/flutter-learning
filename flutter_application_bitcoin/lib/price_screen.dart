@@ -13,9 +13,10 @@ class PriceScreen extends StatefulWidget {
 
 class _PriceScreenState extends State<PriceScreen> {
   String selectedCurrency = 'USD';
-  int price_bitcoin = -1;
-  int price_ethereum = -1;
-  int price_litecoin = -1;
+  double price_bitcoin = -1;
+  double price_ethereum = -1;
+  double price_litecoin = -1;
+  bool isLoading = false;
 
   @override
   void initState() {
@@ -33,69 +34,52 @@ class _PriceScreenState extends State<PriceScreen> {
     return ls;
   }
 
-  Future<dynamic> getDataBitcoin() async {
+  Future<dynamic> getData(String crypto) async {
     Response response = await get(
       Uri.parse(
-        'https://api.coingecko.com/api/v3/simple/price?vs_currencies=$selectedCurrency&ids=bitcoin&x_cg_demo_api_key=$apikey',
+        'https://api.coingecko.com/api/v3/simple/price?vs_currencies=$selectedCurrency&ids=$crypto&x_cg_demo_api_key=$apikey',
       ),
     );
-    if(response.statusCode == 200){
+
+    if (response.statusCode == 200) {
       String data = response.body;
       return jsonDecode(data);
     }
-
-    return null;
-  }
-
-  Future<dynamic> getDataEthereum() async {
-    Response response = await get(
-      Uri.parse(
-        'https://api.coingecko.com/api/v3/simple/price?vs_currencies=$selectedCurrency&ids=ethereum&x_cg_demo_api_key=$apikey',
-      ),
-    );
-    if(response.statusCode == 200){
-      String data = response.body;
-      return jsonDecode(data);
-    }
-
-    return null;
-  }
-
-  Future<dynamic> getDataLitecoin() async {
-    Response response = await get(
-      Uri.parse(
-        'https://api.coingecko.com/api/v3/simple/price?vs_currencies=$selectedCurrency&ids=litecoin&x_cg_demo_api_key=$apikey',
-      ),
-    );
-    if(response.statusCode == 200){
-      String data = response.body;
-      return jsonDecode(data);
-    }
-
     return null;
   }
 
   // setState() cannot take an async function.
   void updateUI() async {
-    final bitcoinData = await getDataBitcoin();
-    final ethereumData = await getDataEthereum();
-    final litecoinData = await getDataLitecoin();
+    try {
+      setState(() {
+        isLoading = true;
+      });
+      final bitcoinData = await getData('bitcoin');
+      final ethereumData = await getData('ethereum');
+      final litecoinData = await getData('litecoin');
 
-    setState(() {
-      if (bitcoinData != null) {
-        price_bitcoin = bitcoinData['bitcoin'][selectedCurrency.toLowerCase()];
-      }
+      setState(() {
+        isLoading = false;
 
-      if (ethereumData != null) {
-        price_ethereum = ethereumData['ethereum'][selectedCurrency.toLowerCase()];
-      }
-
-      if (litecoinData != null) {
-        price_litecoin = litecoinData['litecoin'][selectedCurrency.toLowerCase()];
-      }
-    });
+        if (bitcoinData != null) {
+          price_bitcoin = bitcoinData['bitcoin'][selectedCurrency.toLowerCase()]
+              .toDouble();
+        }
+        if (ethereumData != null) {
+          price_ethereum =
+              ethereumData['ethereum'][selectedCurrency.toLowerCase()]
+                  .toDouble();
+        }
+        if (litecoinData != null) {
+          price_litecoin =
+              litecoinData['litecoin'][selectedCurrency.toLowerCase()]
+                  .toDouble();
+        }
+      });
+    } catch (e) {
+      print('Error updating prices: $e');
+    }
   }
-
 
   @override
   Widget build(BuildContext context) {
@@ -104,9 +88,28 @@ class _PriceScreenState extends State<PriceScreen> {
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
-          CryptoCard(price: price_bitcoin, selectedCurrency: selectedCurrency, cryptoCurrency: 'BTC'),
-          CryptoCard(price: price_ethereum, selectedCurrency: selectedCurrency, cryptoCurrency: 'ETH'),
-          CryptoCard(price: price_litecoin, selectedCurrency: selectedCurrency, cryptoCurrency: 'LTC'),
+          isLoading
+              ? Expanded(child: Center(child: CircularProgressIndicator()))
+              : Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    CryptoCard(
+                      price: price_bitcoin,
+                      selectedCurrency: selectedCurrency,
+                      cryptoCurrency: 'BTC',
+                    ),
+                    CryptoCard(
+                      price: price_ethereum,
+                      selectedCurrency: selectedCurrency,
+                      cryptoCurrency: 'ETH',
+                    ),
+                    CryptoCard(
+                      price: price_litecoin,
+                      selectedCurrency: selectedCurrency,
+                      cryptoCurrency: 'LTC',
+                    ),
+                  ],
+                ),
           Spacer(), // takes all the empty spaces and pushes your container to the bottom
           Container(
             height: 150.0,
