@@ -1,8 +1,15 @@
+import 'package:airbnb_clone/common/common_functions.dart';
 import 'package:airbnb_clone/constants/app_constants.dart';
+import 'package:airbnb_clone/models/user_objects.dart';
+import 'package:airbnb_clone/pages/auth/signup_page.dart';
+import 'package:airbnb_clone/pages/guest/guest_home_page.dart';
 import 'package:airbnb_clone/widgets/custom_text_field.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
 class LoginPage extends StatefulWidget {
+  static const String routeName = '/loginPageRoute';
+
   const LoginPage({super.key});
 
   @override
@@ -14,6 +21,62 @@ class _LoginPageState extends State<LoginPage> {
   final _passwordController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
   bool _isLoading = false;
+
+
+  void _signUp(){
+    Navigator.pushNamed(context, SignupPage.routeName);
+  }
+
+  void _login() async {
+    if(_formKey.currentState!.validate()){
+      setState(() {
+        _isLoading = true;
+      });
+
+      String email = _emailController.text.trim();
+      String password = _passwordController.text.trim();
+
+      try {
+        UserCredential firebaseUser = await FirebaseAuth.instance.signInWithEmailAndPassword(email: email, password: password);
+          
+        if(firebaseUser.user != null){
+          final userID = firebaseUser.user!.uid;
+          AppConstants.currentUser= UserModel(id: userID);
+
+          await AppConstants.currentUser.getPersonalInfoFromFireStore();
+
+          CommonFunctions.showSnackBar(context, "you logged in successfully");
+
+          _formKey.currentState!.reset();
+          Navigator.pushReplacementNamed(context, GuestHomePage.routeName);
+          
+        }
+      } on FirebaseAuthException catch (e) {
+        String errorMessage;
+        switch (e.code) {
+          case "email-already-in-use":
+            errorMessage = "This email is already registered.";
+            break;
+          case "invalid-email":
+            errorMessage = "Please enter a valid email address.";
+            break;
+          case "weak-password":
+            errorMessage =
+                "Password is too weak. Please use a stronger one. Use at-least 6 characters.";
+            break;
+          default:
+            errorMessage = "Sign up failed. Please try again later.";
+        }
+        CommonFunctions.showSnackBar(context, errorMessage);
+      } catch (e) {
+        CommonFunctions.showSnackBar(context, e.toString());
+      } finally {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -52,7 +115,7 @@ class _LoginPageState extends State<LoginPage> {
                       CustomTextField(
                         controller: _passwordController,
                         label: "Password",
-                        icon: Icons.password,
+                        icon: Icons.lock,
                         isPassword: true,
                       ),
                     ],
@@ -65,7 +128,7 @@ class _LoginPageState extends State<LoginPage> {
                   width: double.infinity,
                   height: MediaQuery.of(context).size.height / 15,
                   child: ElevatedButton(
-                    onPressed: _isLoading ? null : null,
+                    onPressed: _isLoading ? null : _login,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.white,
                       foregroundColor: Colors.black,
@@ -91,7 +154,7 @@ class _LoginPageState extends State<LoginPage> {
                   width: double.infinity,
                   height: MediaQuery.of(context).size.height / 15,
                   child: OutlinedButton(
-                    onPressed: _isLoading ? null : null,
+                    onPressed: _isLoading ? null : _signUp,
                     style: OutlinedButton.styleFrom(
                       side: const BorderSide(color: Colors.white, width: 2),
                       shape: RoundedRectangleBorder(

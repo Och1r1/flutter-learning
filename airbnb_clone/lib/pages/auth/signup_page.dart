@@ -1,7 +1,10 @@
 import 'dart:io';
 
+import 'package:airbnb_clone/common/common_functions.dart';
 import 'package:airbnb_clone/constants/app_constants.dart';
+import 'package:airbnb_clone/pages/auth/login_page.dart';
 import 'package:airbnb_clone/widgets/custom_text_field.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
@@ -9,8 +12,9 @@ import 'package:path/path.dart' as path;
 import 'package:path_provider/path_provider.dart';
 import 'package:flutter_image_compress/flutter_image_compress.dart';
 
-
 class SignupPage extends StatefulWidget {
+  static const String routeName = '/signupPageRoute';
+
   const SignupPage({super.key});
 
   @override
@@ -31,37 +35,107 @@ class _SignupPageState extends State<SignupPage> {
   bool _isLoading = false;
 
   Future<void> _chooseImage() async {
-    final XFile? pickedImage = await ImagePicker().pickImage(source: ImageSource.gallery);
+    final XFile? pickedImage = await ImagePicker().pickImage(
+      source: ImageSource.gallery,
+    );
 
-    if (pickedImage != null){
+    if (pickedImage != null) {
       // Conver x file to file
       File originalFile = File(pickedImage.path);
 
       final tempDir = await getTemporaryDirectory();
       final targetPath = path.join(
         tempDir.path,
-        "compressed_${DateTime.now().millisecondsSinceEpoch}.jpg"
+        "compressed_${DateTime.now().millisecondsSinceEpoch}.jpg",
       );
-
 
       final compressedBytes = await FlutterImageCompress.compressWithFile(
         originalFile.path,
         quality: 25,
       );
 
-      if (compressedBytes != null){
-        final compressedFile = File(targetPath)..writeAsBytesSync(compressedBytes);
+      if (compressedBytes != null) {
+        final compressedFile = File(targetPath)
+          ..writeAsBytesSync(compressedBytes);
 
         setState(() {
           _imageFile = compressedFile;
         });
 
-        print("OriginalSize: ${(originalFile.lengthSync() / 1024 ).toStringAsFixed(2)} KB");
-        print("CompressedSize: ${(_imageFile!.lengthSync() / 1024 ).toStringAsFixed(2)} KB");
-
+        print(
+          "OriginalSize: ${(originalFile.lengthSync() / 1024).toStringAsFixed(2)} KB",
+        );
+        print(
+          "CompressedSize: ${(_imageFile!.lengthSync() / 1024).toStringAsFixed(2)} KB",
+        );
       }
+    }
+  }
 
+  Future<void> _createAccount() async {
+    if (!_formKey.currentState!.validate() || _imageFile == null) {
+      CommonFunctions.showSnackBar(
+        context,
+        "Please fill all fields and choose a pfp",
+      );
+      return;
+    }
 
+    setState(() {
+      _isLoading = true;
+    });
+
+    final email = _emailController.text.trim();
+    final password = _passwordController.text.trim();
+
+    try {
+      UserCredential firebaseUser = await FirebaseAuth.instance
+          .createUserWithEmailAndPassword(email: email, password: password);
+        
+      if(firebaseUser.user != null){
+        final userID = firebaseUser.user!.uid;
+        AppConstants.currentUser.id = userID;
+        AppConstants.currentUser.firstName = _firstNameController.text.trim();
+        AppConstants.currentUser.lastName = _lastNameController.text.trim();
+        AppConstants.currentUser.city = _cityController.text.trim();
+        AppConstants.currentUser.country = _countryController.text.trim();
+        AppConstants.currentUser.bio = _bioController.text.trim();
+        AppConstants.currentUser.email = email;
+        AppConstants.currentUser.password = password;
+
+        await AppConstants.currentUser.addUserToFirestore();
+        await AppConstants.currentUser.addImageToFireStore(_imageFile!);
+
+        FirebaseAuth.instance.signOut();
+        CommonFunctions.showSnackBar(context, "your account created successfully. Please login now");
+
+        _formKey.currentState!.reset();
+        Navigator.pushReplacementNamed(context, LoginPage.routeName);
+        
+      }
+    } on FirebaseAuthException catch (e) {
+      String errorMessage;
+      switch (e.code) {
+        case "email-already-in-use":
+          errorMessage = "This email is already registered.";
+          break;
+        case "invalid-email":
+          errorMessage = "Please enter a valid email address.";
+          break;
+        case "weak-password":
+          errorMessage =
+              "Password is too weak. Please use a stronger one. Use at-least 6 characters.";
+          break;
+        default:
+          errorMessage = "Sign up failed. Please try again later.";
+      }
+      CommonFunctions.showSnackBar(context, errorMessage);
+    } catch (e) {
+      CommonFunctions.showSnackBar(context, e.toString());
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
     }
   }
 
@@ -98,7 +172,7 @@ class _SignupPageState extends State<SignupPage> {
                   CustomTextField(
                     controller: _passwordController,
                     label: "Password",
-                    icon: Icons.password,
+                    icon: Icons.lock,
                     isPassword: true,
                   ),
                   CustomTextField(
@@ -148,23 +222,20 @@ class _SignupPageState extends State<SignupPage> {
             _isLoading
                 ? const CircularProgressIndicator(color: Colors.white)
                 : MaterialButton(
-                  onPressed: () {}, 
-                  color: Colors.white,
-                  height: 55,
-                  minWidth: double.infinity,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  child: const Text(
-                    'Sign Up',
-                    style: TextStyle(
-                      fontSize: 20,
-                      color: Colors.black,
+                    onPressed: _createAccount,
+                    color: Colors.white,
+                    height: 55,
+                    minWidth: double.infinity,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
                     ),
-                  )
-                ),
-            
-            
-            
-            SizedBox(height: 20,),
+                    child: const Text(
+                      'Sign Up',
+                      style: TextStyle(fontSize: 20, color: Colors.black),
+                    ),
+                  ),
+
+            SizedBox(height: 20),
           ],
         ),
       ),

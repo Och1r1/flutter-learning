@@ -1,4 +1,6 @@
+import 'package:airbnb_clone/pages/auth/login_page.dart';
 import 'package:airbnb_clone/pages/auth/signup_page.dart';
+import 'package:airbnb_clone/pages/guest/guest_home_page.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 
@@ -19,6 +21,7 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'AirBnB Clone',
+      debugShowCheckedModeBanner: false,
       theme: ThemeData(
         fontFamily: 'Couture',
         brightness: Brightness.dark,
@@ -71,11 +74,13 @@ class MyApp extends StatelessWidget {
           labelStyle: const TextStyle(color: Colors.white),
         ),
       ),
-      home: Scaffold(
-        body: Center(
-          child: SignupPage(),
-        ),
-      ),
+      home: LoginPage(),
+      routes: {
+        LoginPage.routeName: (context) => LoginPage(),
+        SignupPage.routeName: (context) => SignupPage(),
+        GuestHomePage.routeName: (context) => GuestHomePage(),
+
+      },
     );
   }
 }
