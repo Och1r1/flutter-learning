@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 
@@ -93,4 +94,19 @@ class UserModel extends Contact{
 
     return displayImage!;
   }
+
+  Future<void> becomHost() async{
+    isHost = true;
+    Map<String, dynamic> data = {
+      'isHost': true,
+    };
+
+    await FirebaseFirestore.instance.doc('users/$id').update(data);
+    changeCurrentlyHosting(true);
+  }
+
+  void changeCurrentlyHosting(bool isHosting){
+    isCurrentlyHosting = isHosting;
+  }
+  
 }

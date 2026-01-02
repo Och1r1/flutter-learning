@@ -65,7 +65,7 @@ class _LoginPageState extends State<LoginPage> {
                 "Password is too weak. Please use a stronger one. Use at-least 6 characters.";
             break;
           default:
-            errorMessage = "Sign up failed. Please try again later.";
+            errorMessage = "Login failed. Please try again later.";
         }
         CommonFunctions.showSnackBar(context, errorMessage);
       } catch (e) {

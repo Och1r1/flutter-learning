@@ -21,6 +21,8 @@ dependencies:
   image_picker:
   flutter_image_compress:
   path_provider: 
+  auto_size_text: 
+  http: ^1.6.0
   
 
 dev_dependencies:
