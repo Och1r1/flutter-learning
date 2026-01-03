@@ -1,7 +1,9 @@
 import 'dart:io';
 
 import 'package:airbnb_clone/common/common_functions.dart';
+import 'package:airbnb_clone/constants/app_constants.dart';
 import 'package:airbnb_clone/global.dart';
+import 'package:airbnb_clone/pages/host/host_home_page.dart';
 import 'package:airbnb_clone/pages/host/search_property_location_page.dart';
 import 'package:airbnb_clone/models/posting_objects.dart';
 import 'package:airbnb_clone/widgets/facilities_widget.dart';
@@ -63,7 +65,21 @@ class _CreateUpdatePostingPageState extends State<CreateUpdatePostingPage> {
       _cityController = TextEditingController(text: "");
       _countryController = TextEditingController(text: "");
       _amenitiesController = TextEditingController(text: "");
+    } else{
+      _nameController = TextEditingController(text: widget.posting!.name);
+      _priceController = TextEditingController(text: widget.posting!.price.toString());
+      _descriptionController = TextEditingController(text: widget.posting!.description);
+      _addressController = TextEditingController(text: widget.posting!.address);
+      _cityController = TextEditingController(text: widget.posting!.city);
+      _countryController = TextEditingController(text: widget.posting!.country);
+      _amenitiesController = TextEditingController(text: widget.posting!.getAmenitiesString());
+      _beds = widget.posting!.beds;
+      _bathrooms = widget.posting!.bathrooms;
+      _images = widget.posting!.displayImages;
+      _propertyTypeChosen = widget.posting!.type;
     }
+
+    setState(() {});
   }
 
   @override
@@ -131,6 +147,92 @@ class _CreateUpdatePostingPageState extends State<CreateUpdatePostingPage> {
     }
   }
 
+  Future<void> _storePosting() async {
+    if (!_formKey.currentState!.validate()) return;
+
+    if (_propertyTypeChosen == null) {
+      CommonFunctions.showSnackBar(context, "Please select property type");
+      return;
+    }
+
+    if (_images == null || _images!.isEmpty) {
+      CommonFunctions.showSnackBar(context, "Please upload at least one image");
+      return;
+    }
+
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      Posting posting = Posting();
+      posting.name = _nameController.text.toLowerCase();
+      posting.price = double.parse(_priceController.text.trim());
+      posting.description = _descriptionController.text.toLowerCase();
+      posting.address = _addressController.text.toLowerCase();
+      posting.city = _cityController.text.toLowerCase();
+      posting.country = _countryController.text.toLowerCase();
+      posting.amenities =
+          _amenitiesController.text.toLowerCase().split(",");
+      posting.type = _propertyTypeChosen!.toLowerCase();
+      posting.beds = _beds;
+      posting.bathrooms = _bathrooms;
+      posting.displayImages = _images;
+      posting.host = AppConstants.currentUser.createContactFromUser();
+      posting.setImageNames();
+
+      if (widget.posting == null) {
+        posting.rating = 2.5;
+        posting.bookings = [];
+        posting.reviews = [];
+
+        await posting.addPostingInfoToFirestore();
+        await posting.addImagesToFireStore();
+
+        CommonFunctions.showSnackBar(context, 'Your new property listing uploaded successfully');
+      }
+      else{
+        posting.rating = widget.posting!.rating;
+        posting.bookings = widget.posting!.bookings;
+        posting.reviews = widget.posting!.reviews;
+        posting.id = widget.posting!.id;
+
+        for (int i = 0; i < AppConstants.currentUser.myPostings!.length; i++){
+          if (AppConstants.currentUser.myPostings![i].id == posting.id){
+            AppConstants.currentUser.myPostings![i] = posting;
+            break;
+          }
+        }
+
+        posting.updatePostingInfoToFirestore().whenComplete((){
+          setState(() => _isLoading = false);
+          Navigator.push(context, MaterialPageRoute(builder: (context) => HostHomePage(index: 1)));
+        });
+
+        CommonFunctions.showSnackBar(context, 'Your post updated successfully');
+      }
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (context) => HostHomePage(index: 1),
+        ),
+      );
+    } catch (e) {
+      CommonFunctions.showSnackBar(
+        context,
+        "Failed to upload posting. Please try again.",
+      );
+      debugPrint("Upload error: $e");
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -152,7 +254,9 @@ class _CreateUpdatePostingPageState extends State<CreateUpdatePostingPage> {
                   ),
                 )
               : IconButton(
-                  onPressed: () {},
+                  onPressed: () {
+                    _storePosting();
+                  },
                   icon: const Icon(
                     Icons.upload_file_outlined,
                     color: Colors.white,
@@ -263,6 +367,8 @@ class _CreateUpdatePostingPageState extends State<CreateUpdatePostingPage> {
                             children: <Widget>[
                               Expanded(
                                 child: TextFormField(
+                                  controller: _priceController,
+                                  keyboardType: TextInputType.number,
                                   decoration: const InputDecoration(
                                     labelText: 'Price',
                                   ),

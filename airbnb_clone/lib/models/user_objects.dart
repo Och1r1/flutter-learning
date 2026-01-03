@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:airbnb_clone/models/posting_objects.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
@@ -30,6 +31,8 @@ class UserModel extends Contact{
   bool? isCurrentlyHosting;
   String? password;
 
+  List<Posting>? myPostings;
+
   UserModel({
     String id = "",
     String firstName = "",
@@ -42,6 +45,7 @@ class UserModel extends Contact{
   }) : super(id: id, firstName: firstName, lastName: lastName, displayImage: displayImage) {
     isHost = false;
     isCurrentlyHosting = false;
+    myPostings = [];
   }
 
   Future<void> addUserToFirestore() async{
@@ -71,6 +75,7 @@ class UserModel extends Contact{
   Future<void> getPersonalInfoFromFireStore() async{
     await getUserInfoFromFirestore();
     await getImageFromStorage();
+    await getMyPostingsFromFirestore();
   }
 
   Future<void> getUserInfoFromFirestore() async{
@@ -95,6 +100,22 @@ class UserModel extends Contact{
     return displayImage!;
   }
 
+  Future<void> getMyPostingsFromFirestore() async{
+    List<String> myPostingIDs = List<String>.from(snapshot!['myPostingIDs']) ?? [];
+
+    for(String postingID in myPostingIDs){
+      Posting eachPosting = Posting(id: postingID);
+      await eachPosting.getPostingInfoFromFirestore();
+
+      await eachPosting.getAllImagesFromStorage();
+
+      myPostings!.add(eachPosting);
+    }
+  }
+
+
+
+
   Future<void> becomHost() async{
     isHost = true;
     Map<String, dynamic> data = {
@@ -107,6 +128,28 @@ class UserModel extends Contact{
 
   void changeCurrentlyHosting(bool isHosting){
     isCurrentlyHosting = isHosting;
+  }
+
+  Contact createContactFromUser(){
+    return Contact(
+      id: id,
+      firstName: firstName,
+      lastName: lastName,
+      displayImage: displayImage
+    );
+  }
+
+  Future<void> addPostingToMyPostings(Posting posting) async{
+    myPostings!.add(posting);
+
+    List<String> myPostingIDs = [];
+    myPostings!.forEach((posting) {
+      myPostingIDs.add(posting.id!);
+    });
+
+    await FirebaseFirestore.instance.doc('users/$id').update({
+      'myPostingIDs': myPostingIDs
+    });
   }
   
 }
