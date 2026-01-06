@@ -1,0 +1,404 @@
+import 'dart:async';
+
+import 'package:airbnb_clone/common/common_functions.dart';
+import 'package:airbnb_clone/constants/app_constants.dart';
+import 'package:airbnb_clone/models/posting_objects.dart';
+import 'package:airbnb_clone/pages/guest/book_posting_page.dart';
+import 'package:airbnb_clone/pages/guest/review_form_ui.dart';
+import 'package:airbnb_clone/pages/host/bookings_page.dart';
+import 'package:airbnb_clone/widgets/posting_info_tile.dart';
+import 'package:auto_size_text/auto_size_text.dart';
+import 'package:flutter/material.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
+
+class ViewPostingPage extends StatefulWidget {
+  static final String routeName = '/viewPostingRoute';
+
+  final Posting? posting;
+
+  const ViewPostingPage({super.key, this.posting});
+
+  @override
+  State<ViewPostingPage> createState() => _ViewPostingPageState();
+}
+
+class _ViewPostingPageState extends State<ViewPostingPage> {
+
+  Posting? _posting;
+
+  LatLng _propertyLatLong = LatLng(37.42796133580664, -122.085749655962);
+
+  BitmapDescriptor? customIcon;
+
+
+  final Completer<GoogleMapController> _controller =
+      Completer<GoogleMapController>();
+
+  setLatLngOfPropertyAddressForGoogleMap() async {
+    final LatLng? position = await CommonFunctions.propertyLatLong(_posting!.address.toString());
+
+    _propertyLatLong = LatLng(position!.latitude, position!.longitude);
+
+    final GoogleMapController controller = await _controller.future;
+
+    controller.animateCamera(
+      CameraUpdate.newCameraPosition(
+        CameraPosition(target: _propertyLatLong, zoom: 15,),
+      )
+    );
+
+    setState(() {
+      
+    });
+  }
+
+  loadCustomMarker() async {
+    customIcon = await BitmapDescriptor.asset(
+      const ImageConfiguration(size: Size(48, 48),),
+      'assets/images/house.png',
+    );
+
+    setState(() {
+      
+    });
+  }
+
+  @override
+  void initState() {
+    // TODO: implement initState
+    super.initState();
+
+    _posting = widget.posting;
+
+    // load iamges, host, locaiton etc.
+    _posting!.getAllImagesFromStorage().whenComplete((){
+      setState(() {
+        
+      });
+    });
+
+    _posting!.getHostFromFirestore().whenComplete((){
+      setState(() {
+        
+      });
+    });
+
+    setLatLngOfPropertyAddressForGoogleMap();
+    loadCustomMarker();
+  }
+
+  Widget _sectionCard({required String title, required Widget child}){
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.grey[900],
+        borderRadius: BorderRadius.circular(12),
+      ),
+
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: const TextStyle(
+              fontSize: 20,
+              color: Colors.white,
+            ),
+          ),
+
+          const SizedBox(height: 10,),
+          child,
+        ],
+      ),
+
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        backgroundColor: Colors.black,
+        title: const Text("Posting Details", style: TextStyle(color: Colors.white),),
+        actions: [
+          (_posting!.host!.id != AppConstants.currentUser.id) ?
+            IconButton(
+              onPressed: () {}, icon: const Icon(Icons.favorite_border, color: Colors.white),
+            ) : Container(
+
+            )
+        ],
+      ),
+
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.only(bottom: 80),
+        child: Column(
+          children: [
+            // image carousel
+            AspectRatio(
+              aspectRatio: 3/2,
+              child: PageView.builder(
+                itemCount: _posting!.displayImages!.length,
+                itemBuilder: (context, index) {
+                  return ClipRRect(
+                    borderRadius: BorderRadius.circular(15),
+                    child: Image(
+                      image: _posting!.displayImages![index],
+                      fit: BoxFit.cover,
+                    ),
+                  );
+                },
+              ),
+            ),
+
+            // posting name
+
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: AutoSizeText(
+                _posting!.name!,
+                textAlign: TextAlign.justify,
+                maxFontSize: 26,
+                minFontSize: 13,
+                maxLines: 3,
+              ),
+            ),
+
+            // description
+            Container(
+              margin: const EdgeInsets.all(12),
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: Colors.grey[900],
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Text(
+                _posting!.description!,
+                style: TextStyle(color: Colors.white70),
+                textAlign: TextAlign.justify,
+              ),
+            ),
+
+            // info tiles
+
+            _sectionCard(
+              title: "Details",
+              child: Column(
+                children: [
+                  PostingInfoTile(
+                    iconData: Icons.home,
+                    category: _posting!.type!,
+                    categoryInfo: '${_posting!.getNumGuests()} guests',
+                  ),
+                  PostingInfoTile(
+                    iconData: Icons.hotel,
+                    category: "Beds",
+                    categoryInfo: _posting!.getBedroomText(),
+                  ),
+                  PostingInfoTile(
+                    iconData: Icons.wc,
+                    category: "Bathrooms",
+                    categoryInfo: _posting!.getBathroomText(),
+                  ),
+                ],
+              )
+            ),
+
+            // amenetiies
+            _sectionCard(
+              title: "Amenities", 
+              child: Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: _posting!.amenities!.map((amenity) {
+                  return Chip(
+                    label: Text(
+                      amenity.trim(),
+                      style: const TextStyle(color: Colors.white),
+                    ),
+                    backgroundColor: Colors.green.withValues(alpha: 0.2),
+                  );
+                }).toList(),
+              ),
+            ),
+
+            // location
+            _sectionCard(
+              title: "Location", 
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    _posting!.getFullAddress(),
+                    style: const TextStyle(color: Colors.white70),
+                  ),
+
+                  const SizedBox(height: 10,),
+
+                  // google map
+
+                  SizedBox(
+                    height: 201,
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(12),
+                      child: GoogleMap(
+                        mapType: MapType.hybrid,
+                        initialCameraPosition: CameraPosition(
+                          target: _propertyLatLong,
+                          zoom: 15
+                        ),
+                        markers: {
+                          Marker(
+                            markerId: const MarkerId("Home"),
+                            position: _propertyLatLong,
+                            icon: customIcon ?? BitmapDescriptor.defaultMarker,
+                            infoWindow: InfoWindow(
+                              title: "Property",
+                              snippet: _posting!.address
+                            ),
+                          ),
+                        },
+                        onMapCreated: (GoogleMapController controller) {
+                          _controller.complete(controller);
+                        },
+                      ),
+                    ),
+                  ),
+
+                ],
+              )
+            ),
+
+            // reviews
+            _sectionCard(
+              title: "Reviews", 
+              child: Column(
+                children: [
+                  ReviewFormUi(),
+                ],
+              )
+            ),
+
+
+
+            // host card
+            Container(
+              width: double.infinity,
+              margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.grey[850],
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Text(
+                    'Hosted by',
+                    style: const TextStyle(
+                      color: Colors.white70,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  const SizedBox(height: 12,),
+
+                  CircleAvatar(
+                    radius: 35,
+                    backgroundImage: _posting!.host!.displayImage,
+                  ),
+
+                  const SizedBox(height: 8,),
+
+                  Text(
+                    _posting!.host!.getFullName(),
+                  ),
+                ],
+              ),
+
+            )
+
+            
+          ],
+        ),
+      ),
+
+      bottomNavigationBar: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        decoration: BoxDecoration(
+          color: Colors.grey[900],
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.4),
+              blurRadius: 6,
+              offset: const Offset(0, -2)
+
+            )
+          ]
+        ),
+        child: Padding(
+          padding: const EdgeInsets.only(left: 8, right: 8, bottom: 28),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    '💲 ${_posting!.price}',
+                    style: const TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
+                  Text(
+                    '/ night',
+                    style: const TextStyle(
+                      fontSize: 14,
+                      color: Colors.white70,
+                    ),
+                  )
+                ],
+              ),
+              (_posting!.host!.id != AppConstants.currentUser.id) 
+                ? ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.green,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 32,
+                      vertical: 14,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                  onPressed: () {
+                    Navigator.push(context, MaterialPageRoute(builder: (c) => BookPostingPage(posting: _posting,)));
+                  },
+                  child: const Text(
+                    'Book now',
+                    style: TextStyle(fontSize: 16, color: Colors.white),
+                  ),
+                ) 
+                : Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                  decoration: BoxDecoration(
+                    color: Colors.grey,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Text(
+                    'Cannot Book Your Own Posting',
+                    style: TextStyle(fontSize: 8, color: Colors.white),
+                  ),
+                )
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}

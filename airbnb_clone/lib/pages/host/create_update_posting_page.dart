@@ -387,7 +387,7 @@ class _CreateUpdatePostingPageState extends State<CreateUpdatePostingPage> {
                               const Padding(
                                 padding: EdgeInsets.only(left: 10, bottom: 10),
                                 child: Text(
-                                  "\$ / night",
+                                  "💲 / night",
                                   style: TextStyle(
                                     fontSize: 18,
                                     color: Colors.white70,

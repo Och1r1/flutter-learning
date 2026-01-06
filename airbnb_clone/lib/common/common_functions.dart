@@ -1,6 +1,8 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import 'package:geocoding/geocoding.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:http/http.dart' as http;
 
 class CommonFunctions {
@@ -26,4 +28,16 @@ class CommonFunctions {
     }
   }
 
+  static Future<LatLng?> propertyLatLong(String address) async {
+    try{
+      List<Location> locations = await locationFromAddress(address);
+      if(locations.isNotEmpty){
+        final loc = locations.first;
+        return LatLng(loc.latitude, loc.longitude);
+      }
+    } catch(e){
+      print("error: $e");
+    }
+    return null;
+  }
 }

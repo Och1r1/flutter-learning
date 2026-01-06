@@ -19,6 +19,23 @@ class Contact {
     return fullName = "${firstName!} ${lastName!}";
   }
 
+  getContactInfoFromFirestore() async{
+    DocumentSnapshot snapshot = await FirebaseFirestore.instance.collection('users').doc(id).get();
+  
+    firstName = snapshot['firstName'] ?? "";
+    lastName = snapshot['lastName'] ?? "";
+  }
+
+  Future<MemoryImage> getImageFromStorage() async {
+    if(displayImage != null) {return displayImage!;}
+
+    final String imagePath = 'userImages/$id/profile_pic.jpg';
+    final imageData = await FirebaseStorage.instance.ref().child(imagePath).getData();
+    displayImage = MemoryImage(imageData!);
+
+    return displayImage!;
+  }
+
 }
 
 class UserModel extends Contact{

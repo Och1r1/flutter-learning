@@ -99,7 +99,7 @@ class Posting {
     imageNames = List<String>.from(snapshot['imageNames']) ?? [];
     name = snapshot['name'] ?? "";
     price = snapshot['price'].toDouble() ?? 0;
-    price = snapshot['rating'].toDouble() ?? 2.5;
+    rating = snapshot['rating'].toDouble() ?? 2.5;
     type = snapshot['type'] ?? "";
 
   }
@@ -143,6 +143,77 @@ class Posting {
     };
     await FirebaseFirestore.instance.doc('postings/$id').update(data);
   }
+
+  Future<MemoryImage> getFirstImageFromStorage() async {
+    if(displayImages!.isNotEmpty){return displayImages!.first;}
+
+    final String imagePath = "postingImages/$id/${imageNames!.first}";
+    final imageData = await FirebaseStorage.instance.ref().child(imagePath).getData();
+    displayImages!.add(MemoryImage(imageData!));
+
+    return displayImages!.first;
+  }
+
+  double getCurrentRating(){
+    if(reviews == null || reviews!.isEmpty) return 5.0;
+
+    double total = 0;
+    for( var r in reviews!){
+      total += r.rating ?? 0;
+    }
+
+    return total / reviews!.length;
+  }
+
+  getHostFromFirestore() async {
+    await host!.getContactInfoFromFirestore();
+    await host!.getImageFromStorage();
+  }
+
+  int getNumGuests() {
+    int? numGuests = 0;
+
+    numGuests += beds!['small']!;
+    numGuests += beds!['medium']! * 2;
+    numGuests += beds!['large']! * 2;
+
+    return numGuests;
+
+  }
+
+  String getBedroomText(){
+    String text = "";
+
+    if(beds!['small'] != 0){
+      text += "${beds!["small"]} single/tiwn ";
+    }
+    if(beds!['medium'] != 0){
+      text += "${beds!["medium"]} double ";
+    }
+    if(beds!['large'] != 0){
+      text += "${beds!["large"]} double ";
+    }
+
+    return text;
+  }
+
+  String getBathroomText(){
+    String text = "";
+
+    if(bathrooms!["full"] != 0){
+      text += "${bathrooms!["full"]} full ";
+    }
+   if(bathrooms!["half"] != 0){
+      text += "${bathrooms!["half"]} half ";
+    }
+
+    return text;
+  }
+
+  String getFullAddress(){
+    return "${address!}, ${city!}, ${country!}";
+  }
+
 }
 
 
