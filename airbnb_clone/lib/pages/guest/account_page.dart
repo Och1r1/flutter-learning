@@ -33,7 +33,7 @@ class _AccountPageState extends State<AccountPage> {
         Navigator.pushNamed(context, HostHomePage.routeName);
       }
     } else{
-      AppConstants.currentUser.becomHost().whenComplete((){
+      AppConstants.currentUser.becomeHost().whenComplete((){
         AppConstants.currentUser.isCurrentlyHosting = true;
         Navigator.pushNamed(context, HostHomePage.routeName);
       });

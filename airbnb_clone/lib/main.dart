@@ -5,6 +5,7 @@ import 'package:airbnb_clone/pages/guest/guest_home_page.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:flutter_stripe/flutter_stripe.dart';
 
 void main() async {
 
@@ -13,6 +14,9 @@ void main() async {
   await dotenv.load(fileName: ".env");
 
   await Firebase.initializeApp();
+
+  Stripe.publishableKey = dotenv.env["STRIPE_PUBLISH_KEY"]!;
+  await Stripe.instance.applySettings();
 
   runApp(const MyApp());
 }

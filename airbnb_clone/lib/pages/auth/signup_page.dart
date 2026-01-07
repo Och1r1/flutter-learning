@@ -104,7 +104,7 @@ class _SignupPageState extends State<SignupPage> {
         AppConstants.currentUser.password = password;
 
         await AppConstants.currentUser.addUserToFirestore();
-        await AppConstants.currentUser.addImageToFireStore(_imageFile!);
+        await AppConstants.currentUser.addImageToFirestore(_imageFile!);
 
         FirebaseAuth.instance.signOut();
         CommonFunctions.showSnackBar(context, "your account created successfully. Please login now");

@@ -1,10 +1,10 @@
 import 'dart:io';
-
-import 'package:airbnb_clone/models/posting_objects.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+
+import 'messaging_objects.dart';
+import 'posting_objects.dart';
 
 class Contact {
   String? id;
@@ -13,32 +13,32 @@ class Contact {
   String? fullName;
   MemoryImage? displayImage;
 
-  Contact({this.id = "", this.firstName = "", this.lastName = "", this.displayImage});
+  Contact({this.id = "", this.firstName = "", this.lastName="", this.displayImage});
 
   String getFullName(){
-    return fullName = "${firstName!} ${lastName!}";
+    return fullName = firstName! + " " + lastName!;
   }
 
-  getContactInfoFromFirestore() async{
+  Future<void> getContactInfoFromFirestore() async {
     DocumentSnapshot snapshot = await FirebaseFirestore.instance.collection('users').doc(id).get();
-  
     firstName = snapshot['firstName'] ?? "";
     lastName = snapshot['lastName'] ?? "";
   }
 
   Future<MemoryImage> getImageFromStorage() async {
-    if(displayImage != null) {return displayImage!;}
+    if(displayImage != null){return displayImage!;}
 
-    final String imagePath = 'userImages/$id/profile_pic.jpg';
+    final String imagePath = "userImages/$id/profile_pic.jpg";
     final imageData = await FirebaseStorage.instance.ref().child(imagePath).getData();
     displayImage = MemoryImage(imageData!);
 
     return displayImage!;
   }
-
 }
 
-class UserModel extends Contact{
+
+
+class UserModel extends Contact {
   DocumentSnapshot? snapshot;
   String? email;
   String? bio;
@@ -47,6 +47,8 @@ class UserModel extends Contact{
   bool? isHost;
   bool? isCurrentlyHosting;
   String? password;
+
+  List<Booking>? bookings;
 
   List<Posting>? myPostings;
 
@@ -58,58 +60,69 @@ class UserModel extends Contact{
     this.email = "",
     this.bio = "",
     this.city = "",
-    this.country = "",
+    this.country = ""
   }) : super(id: id, firstName: firstName, lastName: lastName, displayImage: displayImage) {
     isHost = false;
     isCurrentlyHosting = false;
+
+    bookings = [];
     myPostings = [];
   }
 
-  Future<void> addUserToFirestore() async{
+  Future<void> addUserToFirestore() async {
     Map<String, dynamic> data = {
-      "bio": bio,
-      "city": city,
+      "bio" : bio,
+      "city" : city,
       "country": country,
       "email": email,
       "firstName": firstName,
-      "isHost": isHost,
+      "isHost": false,
       "lastName": lastName,
       "myPostingIDs": [],
       "savedPostingIDs": [],
       "earnings": 0
     };
-
     await FirebaseFirestore.instance.doc('users/$id').set(data);
   }
 
-  Future<void> addImageToFireStore(File imageFile) async{
+  Future<void> addImageToFirestore(File imageFile) async {
     Reference reference = FirebaseStorage.instance.ref().child('userImages/$id/profile_pic.jpg');
     await reference.putFile(imageFile).whenComplete(() {});
     displayImage = MemoryImage(imageFile.readAsBytesSync());
-
   }
 
-  Future<void> getPersonalInfoFromFireStore() async{
+  Future<void> getPersonalInfoFromFireStore() async {
     await getUserInfoFromFirestore();
     await getImageFromStorage();
     await getMyPostingsFromFirestore();
+    await getAllBookingsFromFirestore();
   }
 
-  Future<void> getUserInfoFromFirestore() async{
+  getAllBookingsFromFirestore() async {
+    bookings = [];
+    QuerySnapshot snapshots = await FirebaseFirestore.instance.collection('users/$id/bookings').get();
+
+    for(var snapshot in snapshots.docs){
+      Booking userBooking = Booking();
+      await userBooking.getBookingInfoFromFirestoreFromUser(createContactFromUser(), snapshot);
+      bookings!.add(userBooking);
+    }
+  }
+
+  Future<void> getUserInfoFromFirestore() async {
     DocumentSnapshot snapshot = await FirebaseFirestore.instance.collection('users').doc(id).get();
     this.snapshot = snapshot;
     firstName = snapshot['firstName'] ?? "";
     lastName = snapshot['lastName'] ?? "";
     email = snapshot['email'] ?? "";
     bio = snapshot['bio'] ?? "";
-    city = snapshot['email'] ?? "";
+    city = snapshot['city'] ?? "";
     country = snapshot['country'] ?? "";
-    isHost = snapshot['isHost'] ?? "";
-
+    isHost = snapshot['isHost'] ?? false;
   }
 
-  Future<MemoryImage> getImageFromStorage() async{
-    if(displayImage != null) {return displayImage!;}
+  Future<MemoryImage> getImageFromStorage() async {
+    if(displayImage != null){return displayImage!;}
     final String imagePath = "userImages/$id/profile_pic.jpg";
     final imageData = await FirebaseStorage.instance.ref().child(imagePath).getData();
     displayImage = MemoryImage(imageData!);
@@ -117,46 +130,41 @@ class UserModel extends Contact{
     return displayImage!;
   }
 
-  Future<void> getMyPostingsFromFirestore() async{
+  Future<void> getMyPostingsFromFirestore() async {
     List<String> myPostingIDs = List<String>.from(snapshot!['myPostingIDs']) ?? [];
+    for(String postingID in myPostingIDs) {
+      Posting eachPost = Posting(id: postingID);
+      await eachPost.getPostingInfoFromFirestore();
+      await eachPost.getAllBookingsFromFirestore();
+      await eachPost.getAllImagesFromStorage();
 
-    for(String postingID in myPostingIDs){
-      Posting eachPosting = Posting(id: postingID);
-      await eachPosting.getPostingInfoFromFirestore();
-
-      await eachPosting.getAllImagesFromStorage();
-
-      myPostings!.add(eachPosting);
+      myPostings!.add(eachPost);
     }
   }
 
-
-
-
-  Future<void> becomHost() async{
+  Future<void> becomeHost() async {
     isHost = true;
-    Map<String, dynamic> data = {
-      'isHost': true,
+    Map<String,dynamic> data = {
+      'isHost' : true,
     };
-
     await FirebaseFirestore.instance.doc('users/$id').update(data);
     changeCurrentlyHosting(true);
   }
 
-  void changeCurrentlyHosting(bool isHosting){
+  changeCurrentlyHosting(bool isHosting) {
     isCurrentlyHosting = isHosting;
   }
 
-  Contact createContactFromUser(){
+  Contact createContactFromUser() {
     return Contact(
       id: id,
       firstName: firstName,
       lastName: lastName,
-      displayImage: displayImage
+      displayImage: displayImage,
     );
   }
 
-  Future<void> addPostingToMyPostings(Posting posting) async{
+  addPostingToMyPostings(Posting posting) async {
     myPostings!.add(posting);
 
     List<String> myPostingIDs = [];
@@ -165,8 +173,75 @@ class UserModel extends Contact{
     });
 
     await FirebaseFirestore.instance.doc('users/$id').update({
-      'myPostingIDs': myPostingIDs
+      'myPostingIDs': myPostingIDs,
     });
   }
-  
+
+  addBookingToFirestore(Booking booking, int totalPriceForAllNights, hostID) async {
+    //ADD BOOKING TO CURRENT USER [GUEST] RECORD
+    Map<String, dynamic> data = {
+      'dates': booking.dates,
+      'postingID': booking.posting!.id!,
+    };
+    await FirebaseFirestore.instance.doc('users/$id/bookings/${booking.id}').set(data);
+
+    //UPDATE HOST EARNINGS
+    String earningsOld = "";
+    await FirebaseFirestore.instance.collection("users").doc(hostID).get().then((dataSnap)
+    {
+      earningsOld = dataSnap["earnings"].toString();
+    });
+    await FirebaseFirestore.instance.collection("users").doc(hostID).update(
+    {
+      "earnings": totalPriceForAllNights + int.parse(earningsOld),
+    });
+
+    bookings!.add(booking);
+    await initNewBookingConversation(booking);
+  }
+
+  initNewBookingConversation(Booking booking) async {
+    Conversation conversation = Conversation();
+    await conversation.addConversationToFirestore(booking.posting!.host!);
+
+    String text = "[New Booking] hello, send message here.";
+    await conversation.addMessageToFirestore(text);
+  }
+
+  List<Booking> getUpcomingTrips() {
+    List<Booking> upcomingTrips = [];
+
+    bookings!.forEach((booking) {
+      if(booking.dates!.last.compareTo(DateTime.now()) > 0) {
+        upcomingTrips.add(booking);
+      }
+    });
+
+    return upcomingTrips;
+  }
+
+  List<Booking> getPreviousTrips() {
+    List<Booking> previousTrips = [];
+
+    bookings!.forEach((booking) {
+      if(booking.dates!.last.compareTo(DateTime.now()) <= 0) {
+        previousTrips.add(booking);
+      }
+    });
+
+    return previousTrips;
+  }
+
+  List<DateTime> getAllBookedDates() {
+    List<DateTime> allBookedDates = [];
+
+    myPostings!.forEach((posting) {
+      posting.bookings!.forEach((booking) {
+        allBookedDates.addAll(booking.dates!);
+      });
+    });
+
+    return allBookedDates;
+  }
+
 }

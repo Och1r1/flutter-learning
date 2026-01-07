@@ -1,3 +1,4 @@
+import 'package:airbnb_clone/common/common_functions.dart';
 import 'package:airbnb_clone/constants/app_constants.dart';
 import 'package:airbnb_clone/models/user_objects.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -214,6 +215,52 @@ class Posting {
     return "${address!}, ${city!}, ${country!}";
   }
 
+  saveBookingData(List<DateTime> dates, context, totalAmount, hostID) async {
+    Map<String, dynamic> bookingData = {
+      'dates': dates,
+      'name': AppConstants.currentUser.getFullName(),
+      'userID': AppConstants.currentUser.id,
+      'payment': totalAmount,
+    };
+
+    DocumentReference reference = await FirebaseFirestore.instance.collection('postings/$id/bookings').add(bookingData);
+
+    Booking newBooking = Booking();
+    newBooking.createBooking(this, AppConstants.currentUser.createContactFromUser(), dates);
+    newBooking.id = reference.id;
+    bookings!.add(newBooking);
+
+    await AppConstants.currentUser.addBookingToFirestore(newBooking, totalAmount, hostID);
+
+    CommonFunctions.showSnackBar(context, 'Booked Successfully');
+
+  }
+
+  getAllBookingsFromFirestore() async {
+    bookings = [];
+
+    QuerySnapshot snapshots = await FirebaseFirestore.instance.collection('postings/$id/bookings').get();
+
+
+    for(var snapshot in snapshots.docs){
+      Booking newBooking = Booking();
+      await newBooking.getBookingInfoFromFirestoreFromPosting(this, snapshot);
+      bookings!.add(newBooking);
+
+    }
+  }
+
+  List<DateTime> getAllBookedDates() {
+    List<DateTime> dates = [];
+
+    bookings!.forEach((booking) {
+      dates.addAll(booking.dates!);
+    });
+
+    return dates;
+
+  }
+
 }
 
 
@@ -224,6 +271,72 @@ class Booking {
   List<DateTime>? dates;
 
   Booking();
+
+  createBooking(Posting posting, Contact contact, List<DateTime> dates){
+    this.posting = posting;
+    this.contact = contact;
+    this.dates = dates;
+    this.dates!.sort();
+  }
+
+  getBookingInfoFromFirestoreFromPosting(Posting posting, DocumentSnapshot snapshot) async {
+    this.posting = posting;
+    List<Timestamp> timestamps = List<Timestamp>.from(snapshot['dates']);
+    dates = [];
+
+    timestamps.forEach((timestamp) {
+      dates!.add(timestamp.toDate());
+    });
+
+    String contactID = snapshot['userID'] ?? "";
+    String fullname = snapshot['name'] ?? "";
+
+    _loadContactInfo(id, fullname);
+
+    contact = Contact(id: contactID);
+
+  }
+
+  getBookingInfoFromFirestoreFromUser(Contact contact, DocumentSnapshot snapshot) async {
+    this.contact = contact;
+
+    List<Timestamp> timestamps = List<Timestamp>.from(snapshot['dates']) ?? [];
+
+    dates = [];
+    timestamps.forEach((timestamp) {
+      dates!.add((timestamp.toDate()));
+    });
+
+    String postingID = snapshot['postingID'] ?? "";
+    posting = Posting(id: postingID);
+    await posting!.getPostingInfoFromFirestore();
+
+    await posting!.getFirstImageFromStorage();
+  }
+
+  _loadContactInfo(String id, String fullName){
+
+    String firstName = "";
+    String lastName = "";
+
+    firstName = fullName.split(" ")[0];
+    lastName = fullName.split(" ")[1];
+
+    contact = Contact(id: id, firstName: firstName, lastName: lastName);
+
+  }
+
+  String getFirstDate(){
+    String firstDate = dates!.first.toIso8601String();
+    return firstDate.substring(0, 10);
+  }
+
+  String getLastDate(){
+    String lastDate = dates!.last.toIso8601String();
+    return lastDate.substring(0, 10);
+  }
+  
+
 }
 
 

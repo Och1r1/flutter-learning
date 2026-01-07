@@ -1,6 +1,10 @@
+import 'package:airbnb_clone/common/common_functions.dart';
+import 'package:airbnb_clone/common/stripe/payment.dart';
+import 'package:airbnb_clone/constants/app_constants.dart';
 import 'package:airbnb_clone/models/posting_objects.dart';
 import 'package:airbnb_clone/widgets/calendar_view_ui.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_stripe/flutter_stripe.dart';
 
 class BookPostingPage extends StatefulWidget {
   static final String routeName = '/bookPostingPageRoute';
@@ -34,7 +38,11 @@ class _BookPostingPageState extends State<BookPostingPage> {
   }
 
   _loadBookedDates(){
-    _buildCalendarWidget();
+    
+    _posting!.getAllBookingsFromFirestore().whenComplete((){
+      _bookedDates = _posting!.getAllBookedDates();
+      _buildCalendarWidget();
+    });
   }
 
   _selectDate(DateTime date) {
@@ -65,6 +73,45 @@ class _BookPostingPageState extends State<BookPostingPage> {
     _posting = widget.posting;
 
     _loadBookedDates();
+  }
+
+  initializeStripePaymentSheet(int paymentAmount) async {
+    try{
+      final data = await createPaymentIntent(name: AppConstants.currentUser.getFullName(), address: _posting!.address!, amount: (paymentAmount * 100).toString());
+      
+      await Stripe.instance.initPaymentSheet(paymentSheetParameters: SetupPaymentSheetParameters(
+        customFlow: false,
+        merchantDisplayName: 'AirBnB Clone',
+        paymentIntentClientSecret: data['client_secret'],
+        customerEphemeralKeySecret: data['ephemeralKey'],
+        customerId: data['id'],
+        style: ThemeMode.dark,
+      ));
+    }
+    catch (e){
+      CommonFunctions.showSnackBar(context, 'Payment setup failed: $e');
+
+      rethrow;
+    }
+  }
+
+  _makeBookingForPropertyListing() async {
+    if(_selectedDates.isEmpty){return;}
+
+    int totalAmount = (_posting!.price! * _selectedDates.length).round();
+
+    await initializeStripePaymentSheet(totalAmount);
+
+    try{
+      await Stripe.instance.presentPaymentSheet();
+
+      _posting!.saveBookingData(_selectedDates, context, totalAmount, _posting!.host!.id!).whenComplete((){
+        Navigator.pop(context);
+      });
+
+    } catch(error){
+      CommonFunctions.showSnackBar(context, 'Payment setup failed: $error');
+    }
   }
 
   @override
@@ -103,7 +150,7 @@ class _BookPostingPageState extends State<BookPostingPage> {
 
             MaterialButton(
               onPressed: () {
-                
+                _makeBookingForPropertyListing();
               },
               minWidth: double.infinity,
               height: MediaQuery.of(context).size.height / 16,
