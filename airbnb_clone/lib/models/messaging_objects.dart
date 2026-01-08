@@ -1,5 +1,6 @@
 import 'package:airbnb_clone/models/user_objects.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:timeago/timeago.dart' as timeAgo;
 
 import '../constants/app_constants.dart';
 
@@ -11,6 +12,40 @@ class Conversation {
 
   Conversation() {
     messages = [];
+  }
+
+  getConversationInfoFromFirestore(DocumentSnapshot snap){
+    id = snap.id;
+
+    String lastMessageText = snap['lastMessageText'] ?? "";
+    Timestamp lastMessageDateTimestamp = snap['lastMessageDateTime'] ?? Timestamp.now();
+    
+    DateTime lastMessageDateTime = lastMessageDateTimestamp.toDate();
+    lastMessage = Message();
+    lastMessage!.dateTime = lastMessageDateTime;
+    lastMessage!.text = lastMessageText;
+    
+    List<String> userIDs = List<String>.from(snap['userIDs']) ?? [];
+    List<String> userNames = List<String>.from(snap['userNames']) ?? [];
+
+    otherContact = Contact();
+
+    for(String userID in userIDs){
+      if(userID != AppConstants.currentUser.id){
+        otherContact!.id = userID;
+        break;
+      }
+    }
+
+    for(String name in userNames){
+      if(name != AppConstants.currentUser.getFullName()){
+        otherContact!.firstName = name.split(" ")[0];
+        otherContact!.lastName = name.split(" ")[1];
+        break;
+      }
+    }
+
+
   }
 
   addConversationToFirestore(Contact otherContact) async {
@@ -58,4 +93,16 @@ class Message {
   DateTime? dateTime;
 
   Message();
+
+  String getMessageDateTime(){
+    return timeAgo.format(dateTime!);
+  }
+
+  getMessageInfoFromFirestore(DocumentSnapshot snapshot){
+    Timestamp lastMessageDateTimestamp = snapshot['dateTime'] ?? Timestamp.now();
+    dateTime = lastMessageDateTimestamp.toDate();
+    String senderID = snapshot['senderID'] ?? "";
+    sender = Contact(id: senderID);
+    text = snapshot['text'];
+  }
 }

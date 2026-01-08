@@ -1,4 +1,7 @@
 import 'package:airbnb_clone/constants/app_constants.dart';
+import 'package:airbnb_clone/models/messaging_objects.dart';
+import 'package:airbnb_clone/pages/guest/chats_page.dart';
+import 'package:airbnb_clone/widgets/conversation_list_tile_ui.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 
@@ -24,8 +27,17 @@ class _InboxPageState extends State<InboxPage> {
               itemCount: snapshots.data!.docs.length,
               itemExtent: MediaQuery.of(context).size.height / 9,
               itemBuilder: (context, index) {
-                DocumentSnapshot snapshot = snapshots.data!.docs[index];
-                
+                DocumentSnapshot eachConversation = snapshots.data!.docs[index];
+
+                Conversation conversation = Conversation();
+                conversation.getConversationInfoFromFirestore(eachConversation);
+
+                return InkResponse(
+                  onTap: () {
+                    Navigator.push(context, MaterialPageRoute(builder: (context) => ChatsPage(conversation: conversation,)));
+                  },
+                  child: ConversationListTileUi(conversation: conversation,),
+                );
               }
             );
         }

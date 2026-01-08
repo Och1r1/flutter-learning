@@ -125,7 +125,12 @@ class _ViewPostingPageState extends State<ViewPostingPage> {
         actions: [
           (_posting!.host!.id != AppConstants.currentUser.id) ?
             IconButton(
-              onPressed: () {}, icon: const Icon(Icons.favorite_border, color: Colors.white),
+              onPressed: () {
+                AppConstants.currentUser.addSavedPosting(_posting!);
+
+                CommonFunctions.showSnackBar(context, 'you have successfully added this post to ur favs');
+              }, 
+              icon: const Icon(Icons.favorite_border, color: Colors.white),
             ) : Container(
 
             )

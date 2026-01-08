@@ -49,7 +49,7 @@ class UserModel extends Contact {
   String? password;
 
   List<Booking>? bookings;
-
+  List<Posting>? savedPostings;
   List<Posting>? myPostings;
 
   UserModel({
@@ -64,7 +64,7 @@ class UserModel extends Contact {
   }) : super(id: id, firstName: firstName, lastName: lastName, displayImage: displayImage) {
     isHost = false;
     isCurrentlyHosting = false;
-
+    savedPostings = [];
     bookings = [];
     myPostings = [];
   }
@@ -94,6 +94,7 @@ class UserModel extends Contact {
   Future<void> getPersonalInfoFromFireStore() async {
     await getUserInfoFromFirestore();
     await getImageFromStorage();
+    await getSavedPostingsFromFirestore();
     await getMyPostingsFromFirestore();
     await getAllBookingsFromFirestore();
   }
@@ -242,6 +243,55 @@ class UserModel extends Contact {
     });
 
     return allBookedDates;
+  }
+
+  addSavedPosting(Posting posting) async {
+    for(var savedPosting in savedPostings!){
+      if(savedPosting.id == posting.id){
+        return;
+      }
+    }
+    savedPostings!.add(posting);
+
+    List<String> savedPostingIDs = [];
+
+    savedPostings!.forEach((savedPosting){
+      savedPostingIDs.add(savedPosting.id!);
+    });
+
+    await FirebaseFirestore.instance.doc('users/$id').update({
+      'savedPostingIDs': savedPostingIDs,
+    });
+  }
+
+  removeSavedPosting(Posting posting) async{
+    for(int i = 0; i < savedPostings!.length; i++){
+      if(savedPostings![i].id == posting.id){
+        savedPostings!.removeAt(i);
+        break;
+      }
+    }
+
+    List<String> savedPostingIDs = [];
+
+    savedPostings!.forEach((savedPosting){
+      savedPostingIDs.add(savedPosting.id!);
+    });
+
+    await FirebaseFirestore.instance.doc('users/$id').update({
+      'savedPostingIDs': savedPostingIDs,
+    });
+  }
+
+  getSavedPostingsFromFirestore() async {
+    List<String> savedPostingIDs = List<String>.from(snapshot!['savedPostingIDs']) ?? [];
+    for(String postingID in savedPostingIDs){
+      Posting newPosting = Posting(id: postingID);
+      
+      await newPosting.getPostingInfoFromFirestore();
+      await newPosting.getFirstImageFromStorage();
+      savedPostings!.add(newPosting);
+    }
   }
 
 }
