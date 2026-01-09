@@ -1,4 +1,5 @@
 import 'package:airbnb_clone/constants/app_constants.dart';
+import 'package:airbnb_clone/pages/guest/profile_info_page.dart';
 import 'package:airbnb_clone/pages/host/host_home_page.dart';
 import 'package:airbnb_clone/pages/auth/login_page.dart';
 import 'package:airbnb_clone/pages/guest/guest_home_page.dart';
@@ -18,7 +19,7 @@ class _AccountPageState extends State<AccountPage> {
   String _hostingTitle = 'Show my Host Dashboard';
 
   void _showPersonInfo (){
-
+    Navigator.pushNamed(context, ProfileInfoPage.routeName);
   }
 
   void _changeHosting () {

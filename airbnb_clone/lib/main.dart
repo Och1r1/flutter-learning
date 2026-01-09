@@ -1,3 +1,4 @@
+import 'package:airbnb_clone/pages/guest/profile_info_page.dart';
 import 'package:airbnb_clone/pages/host/host_home_page.dart';
 import 'package:airbnb_clone/pages/auth/login_page.dart';
 import 'package:airbnb_clone/pages/auth/signup_page.dart';
@@ -88,6 +89,7 @@ class MyApp extends StatelessWidget {
         SignupPage.routeName: (context) => SignupPage(),
         GuestHomePage.routeName: (context) => GuestHomePage(),
         HostHomePage.routeName: (context) => HostHomePage(),
+        ProfileInfoPage.routeName: (context) => ProfileInfoPage(),
 
       },
     );

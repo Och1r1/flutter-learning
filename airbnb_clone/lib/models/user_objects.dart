@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:airbnb_clone/constants/app_constants.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -33,6 +34,15 @@ class Contact {
     displayImage = MemoryImage(imageData!);
 
     return displayImage!;
+  }
+
+  UserModel createUserFromContact(){
+    return UserModel(
+      id: id!,
+      firstName: firstName!,
+      lastName: lastName!,
+      displayImage: displayImage!
+    );
   }
 }
 
@@ -292,6 +302,30 @@ class UserModel extends Contact {
       await newPosting.getFirstImageFromStorage();
       savedPostings!.add(newPosting);
     }
+  }
+
+  postNewReview(String reviewText, double ratingStars) async {
+    Map<String, dynamic> data = {
+      'dateTime': DateTime.now(),
+      'name': AppConstants.currentUser.getFullName(),
+      'rating': ratingStars,
+      'text': reviewText,
+      'userID': AppConstants.currentUser.id,
+    };
+
+    await FirebaseFirestore.instance.collection('users/$id/reviews').add(data);
+  }
+
+  updateUserInFirestore() async{
+    Map<String, dynamic> data = {
+      'firstName': firstName,
+      'lastName': lastName,
+      'bio': bio,
+      'city': city,
+      'country': country,
+    };
+
+    await FirebaseFirestore.instance.doc('users/$id').update(data);
   }
 
 }

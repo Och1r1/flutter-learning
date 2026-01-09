@@ -1,5 +1,6 @@
 import 'package:airbnb_clone/common/common_functions.dart';
 import 'package:airbnb_clone/constants/app_constants.dart';
+import 'package:airbnb_clone/models/review_objects.dart';
 import 'package:airbnb_clone/models/user_objects.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
@@ -261,6 +262,18 @@ class Posting {
 
   }
 
+  postNewReview(String reviewText, double ratingStars) async {
+    Map<String, dynamic> data = {
+      'dateTime': DateTime.now(),
+      'name': AppConstants.currentUser.getFullName(),
+      'rating': ratingStars,
+      'text': reviewText,
+      'userID': AppConstants.currentUser.id,
+    };
+
+    await FirebaseFirestore.instance.collection('postings/$id/reviews').add(data);
+  }
+
 }
 
 
@@ -335,16 +348,4 @@ class Booking {
     String lastDate = dates!.last.toIso8601String();
     return lastDate.substring(0, 10);
   }
-  
-
-}
-
-
-class Review {
-  Contact? contact;
-  String? text;
-  double? rating;
-  DateTime? dateTime;
-
-  Review({this.contact, this.text, this.rating, this.dateTime});
 }

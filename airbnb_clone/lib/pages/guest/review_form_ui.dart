@@ -1,3 +1,4 @@
+import 'package:airbnb_clone/common/common_functions.dart';
 import 'package:airbnb_clone/models/posting_objects.dart';
 import 'package:airbnb_clone/models/user_objects.dart';
 import 'package:custom_rating_bar/custom_rating_bar.dart';
@@ -17,7 +18,32 @@ class _ReviewFormUiState extends State<ReviewFormUi> {
   TextEditingController _controller = new TextEditingController();
   double _rating = 2;
 
-  _saveNewReview() {}
+  _saveNewReview() {
+    if(widget.posting == null) {
+      // review host
+       widget.user!.postNewReview(_controller.text, _rating).whenComplete((){
+        _controller.text = "";
+        _rating = 2.5;
+        setState(() {
+          
+        });
+
+        CommonFunctions.showSnackBar(context, 'Your review has been submitted');
+      });
+    }
+    else{
+      // review property
+      widget.posting!.postNewReview(_controller.text, _rating).whenComplete((){
+        _controller.text = "";
+        _rating = 2.5;
+        setState(() {
+          
+        });
+
+        CommonFunctions.showSnackBar(context, 'Your review has been submitted');
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {

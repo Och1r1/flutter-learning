@@ -3,11 +3,15 @@ import 'dart:async';
 import 'package:airbnb_clone/common/common_functions.dart';
 import 'package:airbnb_clone/constants/app_constants.dart';
 import 'package:airbnb_clone/models/posting_objects.dart';
+import 'package:airbnb_clone/models/review_objects.dart';
 import 'package:airbnb_clone/pages/guest/book_posting_page.dart';
 import 'package:airbnb_clone/pages/guest/review_form_ui.dart';
 import 'package:airbnb_clone/pages/host/bookings_page.dart';
+import 'package:airbnb_clone/pages/host/view_profile_page.dart';
 import 'package:airbnb_clone/widgets/posting_info_tile.dart';
+import 'package:airbnb_clone/widgets/review_design_tile_ui.dart';
 import 'package:auto_size_text/auto_size_text.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
@@ -29,6 +33,26 @@ class _ViewPostingPageState extends State<ViewPostingPage> {
   LatLng _propertyLatLong = LatLng(37.42796133580664, -122.085749655962);
 
   BitmapDescriptor? customIcon;
+
+  bool _canSubmitReview = false;
+
+  _checkIfUserCanReview() async {
+    try{
+      QuerySnapshot snapshots = await FirebaseFirestore.instance.collection('postings/${_posting!.id}/bookings').where('userID', isEqualTo: AppConstants.currentUser.id).get();
+
+      _canSubmitReview = snapshots.docs.isNotEmpty;
+
+      setState(() {
+        
+      });
+    } catch(e){
+      print("error checking review eligibility: $e");
+      _canSubmitReview = false;
+      setState(() {
+        
+      });
+    }
+  }
 
 
   final Completer<GoogleMapController> _controller =
@@ -85,6 +109,8 @@ class _ViewPostingPageState extends State<ViewPostingPage> {
 
     setLatLngOfPropertyAddressForGoogleMap();
     loadCustomMarker();
+
+    _checkIfUserCanReview();
   }
 
   Widget _sectionCard({required String title, required Widget child}){
@@ -281,7 +307,43 @@ class _ViewPostingPageState extends State<ViewPostingPage> {
               title: "Reviews", 
               child: Column(
                 children: [
-                  ReviewFormUi(),
+                  _canSubmitReview ? 
+                  ReviewFormUi(posting: _posting,) 
+                  : Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.grey[800],
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const Text(
+                      'You can submit a review only if u booked this posting',
+                      style: TextStyle(color: Colors.white70),
+                    ),
+                  ),
+
+                  const SizedBox(height: 10,),
+
+                  StreamBuilder(
+                    stream: FirebaseFirestore.instance.collection('postings/${_posting!.id}/reviews').snapshots(), 
+                    builder: (context, snapshots) {
+                      if(snapshots.connectionState == ConnectionState.waiting){
+                        return const Center(child: CircularProgressIndicator(),);
+                      }
+
+                      return ListView.builder(
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        itemCount: snapshots.data!.docs.length,
+                        itemBuilder: (context, index) {
+                          Review currentReview = Review();
+                          currentReview.getReviewFromFirestore(snapshots.data!.docs[index]);
+
+                          // display reviews using ui design
+                          return ReviewDesignTileUi(review: currentReview,);
+                        }
+                      );
+                    }
+                  ),
                 ],
               )
             ),
@@ -297,30 +359,37 @@ class _ViewPostingPageState extends State<ViewPostingPage> {
                 color: Colors.grey[850],
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  Text(
-                    'Hosted by',
-                    style: const TextStyle(
-                      color: Colors.white70,
-                      fontSize: 16,
-                      fontWeight: FontWeight.w500,
+              child: GestureDetector(
+                onTap: () {
+                  if (_canSubmitReview) {
+                    Navigator.push(context, MaterialPageRoute(builder: (c) => ViewProfilePage(contact: _posting!.host!,)));
+                  }
+                },
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    Text(
+                      'Hosted by',
+                      style: const TextStyle(
+                        color: Colors.white70,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w500,
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 12,),
-
-                  CircleAvatar(
-                    radius: 35,
-                    backgroundImage: _posting!.host!.displayImage,
-                  ),
-
-                  const SizedBox(height: 8,),
-
-                  Text(
-                    _posting!.host!.getFullName(),
-                  ),
-                ],
+                    const SizedBox(height: 12,),
+                
+                    CircleAvatar(
+                      radius: 35,
+                      backgroundImage: _posting!.host!.displayImage,
+                    ),
+                
+                    const SizedBox(height: 8,),
+                
+                    Text(
+                      _posting!.host!.getFullName(),
+                    ),
+                  ],
+                ),
               ),
 
             )
